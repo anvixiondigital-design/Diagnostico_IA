@@ -423,13 +423,19 @@ function sendJSONP(data) {
     const script = document.createElement('script');
     const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 30000);
     function cleanup() { clearTimeout(timer); delete window[cb]; script.remove(); }
-    window[cb] = (r) => { console.log('JSONP ok:', r); cleanup(); resolve(r); };
+    window[cb] = (r) => { cleanup(); resolve(r); };
     const url = `${SCRIPT_URL}?callback=${cb}&data=${encodeURIComponent(JSON.stringify(data))}`;
-    console.log('JSONP url:', url);
     script.src = url;
-    script.onerror = (e) => { console.log('JSONP script error:', e); cleanup(); reject(new Error('script error')); };
+    script.onerror = (e) => { cleanup(); reject(new Error('script error')); };
     document.head.appendChild(script);
   });
+}
+
+async function sendInBatches(rows, batchSize = 5) {
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    await sendJSONP({ rows: batch });
+  }
 }
 
 async function sendAllToSheets() {
@@ -447,30 +453,30 @@ async function sendAllToSheets() {
   const fecha = now.toLocaleDateString('es-ES');
   const hora = now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
   const consultor = document.getElementById('f-consultor').value||'—';
-  const rows = [];
-
-  BLOCKS.forEach(block => {
-    const sec = document.getElementById('sec-'+block.id);
-    if (!sec || sec.style.display === 'none') return;
-    block.questions.forEach(q => {
-      const qid = block.id+'-q'+q.n;
-      const el = document.getElementById(qid);
-      const answer = document.getElementById('ans-'+qid)?.value?.trim() || '';
-      rows.push([
-        fecha, hora, empresa, responsable, consultor, currentSector,
-        'Bloque '+block.num, q.n, q.q,
-        el?.classList.contains('checked') ? 'Sí' : 'No',
-        answer, sessionId
-      ]);
-    });
-  });
+  let totalRows = 0;
 
   try {
-    await sendJSONP({ rows });
-    statusEl.textContent = '✓ '+rows.length+' filas enviadas correctamente a Google Sheets.';
+    for (const block of BLOCKS) {
+      const sec = document.getElementById('sec-'+block.id);
+      if (!sec || sec.style.display === 'none') continue;
+      const rows = [];
+      block.questions.forEach(q => {
+        const qid = block.id+'-q'+q.n;
+        const el = document.getElementById(qid);
+        const answer = document.getElementById('ans-'+qid)?.value?.trim() || '';
+        rows.push([
+          fecha, hora, empresa, responsable, consultor, currentSector,
+          'Bloque '+block.num, q.n, q.q,
+          el?.classList.contains('checked') ? 'Sí' : 'No',
+          answer, sessionId
+        ]);
+      });
+      if (rows.length) { await sendJSONP({ rows }); totalRows += rows.length; }
+    }
+    statusEl.textContent = '✓ '+totalRows+' filas enviadas correctamente a Google Sheets.';
     statusEl.className = 'send-status ok';
   } catch(e) {
-    statusEl.textContent = '✗ Error al enviar. Descarga el HTML y ábrelo localmente.';
+    statusEl.textContent = '✗ Error al enviar. Inténtalo de nuevo.';
     statusEl.className = 'send-status err';
     btn.disabled = false;
   }
