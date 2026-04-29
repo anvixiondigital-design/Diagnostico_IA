@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANVIXION · Diagnóstico IA</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f11; --surface: #16181c; --surface2: #1e2127;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+    --text: #f0f0ee; --muted: #7a7d85;
+    --accent: #1D9E75; --accent-dim: rgba(29,158,117,0.12); --accent-border: rgba(29,158,117,0.35);
+    --warn: #d4a017; --warn-dim: rgba(212,160,23,0.1); --warn-border: rgba(212,160,23,0.3);
+    --danger: #e05c5c; --radius: 10px; --radius-lg: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 0.5px solid var(--border2); }
+  .logo { font-family: 'DM Mono', monospace; font-size: 13px; letter-spacing: 0.12em; color: var(--accent); }
+  .logo span { color: var(--muted); }
+  .session-id { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  .client-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; padding: 1.25rem 1.5rem; border-bottom: 0.5px solid var(--border); }
+  .cf { display: flex; flex-direction: column; gap: 4px; }
+  .cf label { font-size: 11px; color: var(--muted); }
+  .cf input { background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 8px 10px; color: var(--text); font-size: 13px; transition: border 0.2s; font-family: 'DM Sans', sans-serif; }
+  .cf input:focus { outline: none; border-color: var(--accent); }
+
+  .sector-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 1rem 1.5rem; align-items: center; }
+  .sector-label { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-right: 4px; }
+  .sector-btn { font-size: 12px; padding: 5px 13px; border-radius: 20px; border: 0.5px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .sector-btn:hover { color: var(--text); }
+  .sector-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-border); }
+
+  .prog-bar-wrap { background: var(--surface); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+  .bar-bg { height: 3px; background: var(--border2); border-radius: 2px; }
+  .bar-fill { height: 3px; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+
+  .section { background: var(--surface); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1rem; }
+  .sec-header { display: flex; align-items: center; gap: 10px; padding: 1rem 1.5rem; cursor: pointer; transition: background 0.15s; user-select: none; }
+  .sec-header:hover { background: var(--surface2); }
+  .sec-num { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); min-width: 22px; }
+  .sec-title { font-size: 14px; font-weight: 500; flex: 1; }
+  .sec-badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 0.5px solid var(--accent-border); background: var(--accent-dim); color: var(--accent); font-family: 'DM Mono', monospace; }
+  .sec-badge.cond { border-color: var(--warn-border); background: var(--warn-dim); color: var(--warn); }
+  .sec-count { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .chevron { font-size: 10px; color: var(--muted); transition: transform 0.25s; }
+  .chevron.open { transform: rotate(180deg); }
+  .sec-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+  .sec-body.open { max-height: 6000px; }
+
+  .question { border-top: 0.5px solid var(--border); }
+  .q-header { display: flex; gap: 12px; align-items: flex-start; padding: 0.9rem 1.5rem; cursor: pointer; transition: background 0.15s; }
+  .q-header:hover { background: var(--surface2); }
+  .question.checked > .q-header { background: rgba(29,158,117,0.05); }
+
+  .cb { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--border2); flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .question.checked .cb { background: var(--accent); border-color: var(--accent); }
+  .ck { display: none; color: #fff; font-size: 10px; font-weight: 700; }
+  .question.checked .ck { display: block; }
+
+  .q-body { flex: 1; }
+  .q-text { font-size: 13.5px; line-height: 1.55; }
+  .q-hint { font-size: 11.5px; color: var(--muted); margin-top: 3px; font-style: italic; line-height: 1.4; }
+
+  .q-answer-wrap {
+    display: none; padding: 0 1.5rem 1rem 3.1rem;
+    border-top: 0.5px solid var(--border);
+    background: rgba(29,158,117,0.03);
+    animation: fadeIn 0.2s ease;
+  }
+  .question.answered > .q-answer-wrap { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .q-answer-wrap label { font-size: 11px; color: var(--accent); font-family: 'DM Mono', monospace; display: block; margin: 0.75rem 0 5px; }
+  .q-answer-wrap textarea {
+    width: 100%; background: var(--surface2); border: 0.5px solid var(--accent-border);
+    border-radius: var(--radius); padding: 9px 12px; color: var(--text);
+    font-size: 13px; font-family: 'DM Sans', sans-serif;
+    resize: none; line-height: 1.5; transition: border 0.2s;
+  }
+  .q-answer-wrap textarea:focus { outline: none; border-color: var(--accent); }
+
+  .footer-row { display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap; }
+  .btn { font-size: 13px; padding: 10px 20px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: transparent; color: var(--text); cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #0e0f11; font-weight: 600; }
+  .btn.primary:hover { opacity: 0.88; }
+  .btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.danger { border-color: rgba(224,92,92,0.3); color: var(--danger); }
+  .btn.danger:hover { background: rgba(224,92,92,0.08); }
+
+  /* RESUMEN */
+  .resumen-card { display: none; background: var(--surface); border: 0.5px solid var(--accent-border); border-radius: var(--radius-lg); padding: 1.5rem; margin-top: 1.25rem; }
+  .resumen-card.visible { display: block; }
+  .resumen-card h3 { font-size: 13px; font-weight: 500; color: var(--accent); font-family: 'DM Mono', monospace; margin-bottom: 1.25rem; }
+
+  .res-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .res-meta-item { background: var(--surface2); border-radius: var(--radius); padding: 0.9rem; }
+  .res-meta-item .val { font-size: 20px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .res-meta-item .lbl { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  .res-section { margin-bottom: 1.5rem; }
+  .res-section h4 { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--border2); }
+  .res-item { padding: 10px 14px; border-radius: var(--radius); background: var(--surface2); margin-bottom: 8px; }
+  .res-item .ri-q { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .res-item .ri-a { font-size: 13.5px; color: var(--text); line-height: 1.55; }
+  .res-item.no-answer .ri-a { font-style: italic; font-size: 12px; color: var(--muted); }
+
+  .propuesta-wrap { margin-top: 1.5rem; }
+  .propuesta-wrap h4 { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--accent); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--accent-border); }
+  #propuesta-output { width: 100%; min-height: 180px; background: var(--surface2); border: 0.5px solid var(--accent-border); border-radius: var(--radius); padding: 12px 14px; color: var(--text); font-size: 13px; line-height: 1.7; font-family: 'DM Sans', sans-serif; resize: vertical; }
+  #propuesta-output:focus { outline: none; border-color: var(--accent); }
+
+  .gen-btn { margin-top: 10px; font-size: 13px; padding: 10px 20px; border-radius: var(--radius); border: none; background: var(--accent); color: #0e0f11; cursor: pointer; font-weight: 600; font-family: 'DM Sans', sans-serif; transition: opacity 0.2s; display: flex; align-items: center; gap: 8px; }
+  .gen-btn:hover { opacity: 0.88; }
+  .gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .spinner { width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #0e0f11; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+  .spinner.active { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .send-wrap { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 0.5px solid var(--border2); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .send-status { font-size: 12px; font-family: 'DM Mono', monospace; }
+  .send-status.ok { color: var(--accent); }
+  .send-status.err { color: var(--danger); }
+  .send-status.loading { color: var(--warn); }
+
+  .alert-banner { display: none; background: var(--warn-dim); border: 0.5px solid var(--warn-border); border-radius: var(--radius); padding: 10px 14px; font-size: 12.5px; color: var(--warn); margin-bottom: 1rem; }
+  .alert-banner.visible { display: block; }
+
+  @media (max-width: 580px) {
+    .topbar { flex-direction: column; align-items: flex-start; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <div class="logo">ANVIXION<span> · Diagnóstico IA</span></div>
+    <div class="session-id" id="sid-display"></div>
+  </div>
+
+  <div class="alert-banner" id="alert-banner"></div>
+
+  <div class="section" style="margin-bottom:1.5rem;">
+    <div class="client-grid">
+      <div class="cf"><label>Empresa</label><input type="text" id="f-empresa" placeholder="Nombre empresa"></div>
+      <div class="cf"><label>Responsable</label><input type="text" id="f-responsable" placeholder="Nombre y cargo"></div>
+      <div class="cf"><label>Fecha</label><input type="date" id="f-fecha"></div>
+      <div class="cf"><label>Consultor ANVIXION</label><input type="text" id="f-consultor" placeholder="Nombre consultor"></div>
+    </div>
+    <div class="sector-row">
+      <span class="sector-label">Sector:</span>
+      <button class="sector-btn active" onclick="setSector(this,'General')">General</button>
+      <button class="sector-btn" onclick="setSector(this,'Clínica')">Clínica / Salud</button>
+      <button class="sector-btn" onclick="setSector(this,'Fitness')">Fitness / Deporte</button>
+      <button class="sector-btn" onclick="setSector(this,'Inmobiliaria')">Inmobiliaria</button>
+      <button class="sector-btn" onclick="setSector(this,'Restauración')">Restauración</button>
+      <button class="sector-btn" onclick="setSector(this,'Despacho')">Despacho / Asesoría</button>
+      <button class="sector-btn" onclick="setSector(this,'Ecommerce')">Ecommerce</button>
+    </div>
+  </div>
+
+  <div class="prog-bar-wrap">
+    <div class="progress-meta">
+      <span id="prog-text">0 preguntas respondidas</span>
+      <span id="prog-pct">0%</span>
+    </div>
+    <div class="bar-bg"><div class="bar-fill" id="bar" style="width:0%"></div></div>
+  </div>
+
+  <div id="sections-root"></div>
+
+  <div class="footer-row">
+    <button class="btn primary" id="btn-resumen" onclick="showResumen()">Ver resumen del diagnóstico</button>
+    <button class="btn danger" onclick="resetAll()">Reiniciar</button>
+  </div>
+
+  <div class="resumen-card" id="resumen-card">
+    <h3>// Resumen del diagnóstico</h3>
+    <div class="res-meta">
+      <div class="res-meta-item"><div class="val" id="sc-total">0/0</div><div class="lbl">Preguntas respondidas</div></div>
+      <div class="res-meta-item"><div class="val" id="sc-pct">0%</div><div class="lbl">Completado</div></div>
+      <div class="res-meta-item"><div class="val" id="sc-sector">—</div><div class="lbl">Sector</div></div>
+      <div class="res-meta-item"><div class="val" id="sc-empresa">—</div><div class="lbl">Empresa</div></div>
+    </div>
+    <div id="res-answers-root"></div>
+
+    <div class="send-wrap">
+      <button class="btn primary" id="btn-send" onclick="sendAllToSheets()">Enviar diagnóstico a Google Sheets</button>
+      <span class="send-status" id="send-status"></span>
+    </div>
+  </div>
+
+</div>
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4CdH1s2nx8o7U7L0M_tTqyfqObv8GSto5C-J_xdmHUFBvHBjtRx51tSmMwkD4Qzwp4w/exec';
+const sessionId = 'S-' + Date.now().toString(36).toUpperCase();
+document.getElementById('sid-display').textContent = sessionId;
+document.getElementById('f-fecha').valueAsDate = new Date();
+let currentSector = 'General';
+
+const BLOCKS = [
+  { id:'b1', num:'01', title:'Perfil del negocio y situación actual', badge:'~4 min', sector:null, questions:[
+    {n:1,q:'¿A qué se dedica exactamente la empresa y cuál es su principal fuente de ingresos?',hint:'Entender el core del negocio.'},
+    {n:2,q:'¿Cuántas personas forman el equipo actualmente? ¿Tienen departamentos diferenciados?',hint:'Define escala y estructura.'},
+    {n:3,q:'¿Cuáles son los 3 procesos que más tiempo os consumen a diario en la empresa?',hint:'Pain directo. Primer objetivo de automatización.'},
+    {n:4,q:'¿Cuántas consultas, llamadas o mensajes de clientes recibís al día o a la semana?',hint:'Volumen de atención al cliente.'},
+    {n:5,q:'¿Cuánto tiempo dedica el equipo a tareas repetitivas que podrían hacerse solas?',hint:'Anclaje emocional con el decisor.'},
+  ]},
+  { id:'b2', num:'02', title:'Atención al cliente y comunicación', badge:'~4 min', sector:null, questions:[
+    {n:1,q:'¿Por qué canales os contactan vuestros clientes principalmente? (teléfono, WhatsApp, email, web…)',hint:'Define qué canales cubrir con automatización.'},
+    {n:2,q:'¿Qué suelen preguntar mayoritariamente? ¿Precios, disponibilidad, citas, seguimiento…?',hint:'Diseño de flujos del asistente conversacional.'},
+    {n:3,q:'¿Tenéis atención al cliente fuera del horario laboral? ¿Perdéis clientes por eso?',hint:'El 24/7 es un argumento de venta inmediato.'},
+    {n:4,q:'¿Cuánto tiempo tarda de media el equipo en responder a una consulta nueva?',hint:'Calcula el tiempo perdido. Refuerza el ROI.'},
+    {n:5,q:'¿Tenéis actualmente algún CRM o sistema donde registráis clientes o leads?',hint:'Potencial de integración con chatbot o agente.'},
+  ]},
+  { id:'b3', num:'03', title:'Captación de clientes y ventas', badge:'~3 min', sector:null, questions:[
+    {n:1,q:'¿De dónde vienen actualmente vuestros clientes nuevos? (referidos, redes, web, Google, publicidad…)',hint:'Identifica flujo de leads que automatizar.'},
+    {n:2,q:'¿Qué proceso seguís desde que entra un lead nuevo hasta que se convierte en cliente?',hint:'Mapa del funnel actual. Detecta cuellos de botella.'},
+    {n:3,q:'¿Cuántos leads entran al mes y cuántos acabáis convirtiendo aproximadamente?',hint:'Ratio de conversión. Abre la puerta al seguimiento automático.'},
+    {n:4,q:'¿Hacéis algún tipo de seguimiento postventa o fidelización de clientes actuales?',hint:'Automatizaciones de retención y upselling.'},
+  ]},
+  { id:'b4', num:'04', title:'Herramientas y tecnología actual', badge:'~3 min', sector:null, questions:[
+    {n:1,q:'¿Qué herramientas o software usáis actualmente en el día a día?',hint:'Inventario tecnológico. Marca las integraciones posibles.'},
+    {n:2,q:'¿Utilizáis ya alguna herramienta de IA, aunque sea puntualmente? (ChatGPT, Copilot, etc.)',hint:'Calibra el nivel de madurez digital.'},
+    {n:3,q:'¿Tenéis web activa y recibís contactos por ella actualmente?',hint:'Potencial de despliegue del chatbot web.'},
+    {n:4,q:'¿Hay procesos en Excel o manuales que te gustaría que fueran automáticos?',hint:'Excel manual = automatización segura. Muy frecuente en pymes.'},
+  ]},
+  { id:'b5', num:'05', title:'Objetivos y motivación del decisor', badge:'~3 min', sector:null, questions:[
+    {n:1,q:'Si pudieras resolver un solo problema de tu negocio mañana, ¿cuál sería?',hint:'Pain principal en boca del propio decisor.'},
+    {n:2,q:'¿Cuál es tu objetivo principal para los próximos 6-12 meses? ¿Crecer, reducir costes, mejorar servicio…?',hint:'Alinea la solución con el objetivo estratégico.'},
+    {n:3,q:'¿Cuánto tiempo dedicas cada semana a tareas que no deberías estar haciendo tú?',hint:'Impacto personal en el decisor. Alta carga emocional.'},
+    {n:4,q:'¿Tienes idea de cuánto te puede estar costando no automatizar estos procesos todavía?',hint:'Abre la puerta al cálculo del ROI.'},
+  ]},
+  { id:'b6a', num:'6A', title:'Solo en caso de: Clínica / Centro de salud', badge_cond:true, sector:'Clínica', questions:[
+    {n:1,q:'¿Cuántas llamadas o mensajes recibís al día solo para pedir o modificar citas?',hint:'Automatización de agenda: impacto inmediato.'},
+    {n:2,q:'¿Tenéis sistema de recordatorio de citas? ¿Cuántos no-shows tenéis al mes?',hint:'Los no-shows representan pérdida directa de ingresos.'},
+    {n:3,q:'¿Recepción dedica tiempo a responder dudas básicas de pacientes (precios, servicios, horarios)?',hint:'Chatbot pre-consulta. Libera al personal.'},
+    {n:4,q:'¿Realizáis seguimiento post-consulta o de tratamiento con los pacientes?',hint:'Automatización de seguimiento: adherencia y fidelización.'},
+  ]},
+  { id:'b6b', num:'6B', title:'Solo en caso de: Gimnasio / Centro deportivo', badge_cond:true, sector:'Fitness', questions:[
+    {n:1,q:'¿Cómo gestionáis altas, bajas y renovaciones de socios? ¿Es manual?',hint:'Proceso muy automatizable.'},
+    {n:2,q:'¿Tenéis socios que llevan semanas sin venir sin que lo detectéis?',hint:'Retención inteligente: alertas automáticas.'},
+    {n:3,q:'¿Cómo informáis a los socios de novedades, horarios o cambios de clases?',hint:'Comunicación masiva automatizada.'},
+  ]},
+  { id:'b6c', num:'6C', title:'Solo en caso de: Inmobiliaria / Real estate', badge_cond:true, sector:'Inmobiliaria', questions:[
+    {n:1,q:'¿Cuánto tiempo dedica el equipo a filtrar y calificar leads de portales?',hint:'El agente IA precualifica antes del comercial.'},
+    {n:2,q:'¿Cómo gestionáis las visitas a inmuebles y sus recordatorios?',hint:'Automatización de reserva y confirmación.'},
+    {n:3,q:'¿Tenéis leads fríos que nadie ha vuelto a contactar?',hint:'Reactivación automática de base de datos fría.'},
+  ]},
+  { id:'b6d', num:'6D', title:'Solo en caso de: Restauración / Hotelería', badge_cond:true, sector:'Restauración', questions:[
+    {n:1,q:'¿Cómo gestionáis las reservas actualmente?',hint:'Chatbot o agente de voz para reservas 24/7.'},
+    {n:2,q:'¿Recibís muchas consultas sobre carta, alérgenos, horarios o eventos?',hint:'Automatización de FAQs.'},
+    {n:3,q:'¿Tenéis takeaway o pedidos online propios? ¿Cómo los gestionáis?',hint:'Automatización del flujo de pedido.'},
+  ]},
+  { id:'b6e', num:'6E', title:'Solo en caso de: Despacho / Asesoría / Gestoría', badge_cond:true, sector:'Despacho', questions:[
+    {n:1,q:'¿Cuánto tiempo se dedica a recopilar documentación de clientes?',hint:'El agente IA solicita y organiza documentación.'},
+    {n:2,q:'¿Los clientes llaman frecuentemente para saber el estado de sus gestiones?',hint:'Asistente de consulta de estado automático.'},
+    {n:3,q:'¿Hay tareas recurrentes mensuales para los mismos clientes con el mismo proceso?',hint:'Mayor potencial de automatización en despachos.'},
+  ]},
+  { id:'b6f', num:'6F', title:'Solo en caso de: Ecommerce / Venta online', badge_cond:true, sector:'Ecommerce', questions:[
+    {n:1,q:'¿Qué % de consultas son sobre estado de pedido, devoluciones o cambios?',hint:'El 70-80% son resolubles con IA.'},
+    {n:2,q:'¿Tenéis carritos abandonados y algún flujo de recuperación?',hint:'Recuperación de carrito: mejor ROI en ecommerce.'},
+    {n:3,q:'¿Hacéis campañas de email o WhatsApp a vuestra base de clientes?',hint:'Marketing automation: personalización a escala.'},
+  ]},
+  { id:'b7', num:'07', title:'Cierre del diagnóstico y siguientes pasos', badge:'~2 min', sector:null, questions:[
+    {n:1,q:'¿Estarías dispuesto/a a implementar una solución si el ROI fuera claro y rápido?',hint:'Sondeo de intención real.'},
+    {n:2,q:'¿Hay algo que te frene o que necesites que quede claro antes de avanzar?',hint:'Gestión anticipada de objeciones.'},
+    {n:3,q:'¿Eres tú el/la decisor/a final o hay alguien más en la siguiente reunión?',hint:'Confirmar que hablamos con el decisor real.'},
+  ]},
+];
+
+function buildDOM() {
+  const root = document.getElementById('sections-root');
+  root.innerHTML = '';
+  BLOCKS.forEach((block, bi) => {
+    const isCond = !!block.sector;
+    const sec = document.createElement('div');
+    sec.className = 'section' + (isCond ? ' conditional-section' : '');
+    if (isCond) { sec.dataset.sector = block.sector; sec.style.display = 'none'; }
+    sec.id = 'sec-' + block.id;
+    const badgeHtml = block.badge_cond ? `<span class="sec-badge cond">Sectorial</span>` : `<span class="sec-badge">${block.badge}</span>`;
+    sec.innerHTML = `
+      <div class="sec-header" onclick="toggleSec(this)">
+        <span class="sec-num">${block.num}</span>
+        <span class="sec-title">${block.title}</span>
+        ${badgeHtml}
+        <span class="sec-count" id="cnt-${block.id}"></span>
+        <span class="chevron ${bi===0?'open':''}">▼</span>
+      </div>
+      <div class="sec-body ${bi===0?'open':''}">
+        ${block.questions.map(q => buildQuestionHTML(block.id, q)).join('')}
+      </div>`;
+    root.appendChild(sec);
+  });
+  updateProgress();
+}
+
+function buildQuestionHTML(blockId, q) {
+  const qid = `${blockId}-q${q.n}`;
+  return `
+  <div class="question" id="${qid}" data-block="${blockId}" data-n="${q.n}" data-q="${q.q}">
+    <div class="q-header" onclick="toggleQuestion('${qid}')">
+      <div class="cb"><span class="ck">✓</span></div>
+      <div class="q-body">
+        <div class="q-text">${q.q}</div>
+        <div class="q-hint">${q.hint}</div>
+      </div>
+    </div>
+    <div class="q-answer-wrap">
+      <label>// Respuesta del cliente</label>
+      <textarea rows="3" id="ans-${qid}" placeholder="Escribe aquí la respuesta del cliente..."></textarea>
+    </div>
+  </div>`;
+}
+
+function toggleQuestion(qid) {
+  const el = document.getElementById(qid);
+  el.classList.toggle('checked');
+  el.classList.toggle('answered');
+  updateProgress();
+  updateSectionCount(el.closest('.section'));
+  if (el.classList.contains('answered')) {
+    setTimeout(() => document.getElementById('ans-'+qid)?.focus(), 50);
+  }
+}
+
+function toggleSec(header) {
+  const body = header.nextElementSibling;
+  const chev = header.querySelector('.chevron');
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+function setSector(btn, sector) {
+  document.querySelectorAll('.sector-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentSector = sector;
+  document.querySelectorAll('.conditional-section').forEach(sec => {
+    sec.style.display = sec.dataset.sector === sector ? '' : 'none';
+  });
+  updateProgress();
+}
+
+function updateSectionCount(section) {
+  const total = section.querySelectorAll('.question').length;
+  const done = section.querySelectorAll('.question.checked').length;
+  const id = section.id.replace('sec-','');
+  const el = document.getElementById('cnt-'+id);
+  if (el) el.textContent = done+'/'+total;
+}
+
+function updateProgress() {
+  const secs = [...document.querySelectorAll('.section')].filter(s => s.style.display !== 'none');
+  let total = 0, done = 0;
+  secs.forEach(s => { total += s.querySelectorAll('.question').length; done += s.querySelectorAll('.question.checked').length; updateSectionCount(s); });
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  document.getElementById('prog-text').textContent = done+' de '+total+' preguntas respondidas';
+  document.getElementById('prog-pct').textContent = pct+'%';
+  document.getElementById('bar').style.width = pct+'%';
+}
+
+function showAlert(msg) {
+  const b = document.getElementById('alert-banner');
+  b.textContent = msg; b.classList.add('visible');
+  setTimeout(() => b.classList.remove('visible'), 4000);
+}
+
+function showResumen() {
+  const empresa = document.getElementById('f-empresa').value.trim();
+  const responsable = document.getElementById('f-responsable').value.trim();
+  if (!empresa || !responsable) { showAlert('⚠ Rellena Empresa y Responsable antes de ver el resumen.'); return; }
+
+  const card = document.getElementById('resumen-card');
+  card.classList.add('visible');
+
+  const secs = [...document.querySelectorAll('.section')].filter(s => s.style.display !== 'none');
+  let total = 0, done = 0;
+  secs.forEach(s => { total += s.querySelectorAll('.question').length; done += s.querySelectorAll('.question.checked').length; });
+
+  document.getElementById('sc-total').textContent = done+'/'+total;
+  document.getElementById('sc-pct').textContent = Math.round((done/total)*100)+'%';
+  document.getElementById('sc-sector').textContent = currentSector;
+  document.getElementById('sc-empresa').textContent = empresa;
+
+  const root = document.getElementById('res-answers-root');
+  root.innerHTML = '';
+  BLOCKS.forEach(block => {
+    const sec = document.getElementById('sec-'+block.id);
+    if (!sec || sec.style.display === 'none') return;
+    const answered = block.questions.filter(q => document.getElementById(block.id+'-q'+q.n)?.classList.contains('checked'));
+    if (!answered.length) return;
+    const div = document.createElement('div');
+    div.className = 'res-section';
+    div.innerHTML = `<h4>// ${block.num} · ${block.title}</h4>`;
+    answered.forEach(q => {
+      const qid = block.id+'-q'+q.n;
+      const answer = document.getElementById('ans-'+qid)?.value?.trim() || '';
+      const item = document.createElement('div');
+      item.className = 'res-item' + (!answer ? ' no-answer' : '');
+      item.innerHTML = `<div class="ri-q">${q.q}</div><div class="ri-a">${answer || '(sin respuesta registrada)'}</div>`;
+      div.appendChild(item);
+    });
+    root.appendChild(div);
+  });
+
+  document.getElementById('send-status').textContent = '';
+  document.getElementById('btn-send').disabled = false;
+  card.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+
+
+// ── SEND ALL (único envío al final) ──────────────────────
+function sendJSONP(data) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Date.now();
+    const script = document.createElement('script');
+    const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 30000);
+    function cleanup() { clearTimeout(timer); delete window[cb]; script.remove(); }
+    window[cb] = (r) => { console.log('JSONP ok:', r); cleanup(); resolve(r); };
+    const url = `${SCRIPT_URL}?callback=${cb}&data=${encodeURIComponent(JSON.stringify(data))}`;
+    console.log('JSONP url:', url);
+    script.src = url;
+    script.onerror = (e) => { console.log('JSONP script error:', e); cleanup(); reject(new Error('script error')); };
+    document.head.appendChild(script);
+  });
+}
+
+async function sendAllToSheets() {
+  const empresa = document.getElementById('f-empresa').value.trim();
+  const responsable = document.getElementById('f-responsable').value.trim();
+  if (!empresa || !responsable) { showAlert('⚠ Rellena Empresa y Responsable antes de enviar.'); return; }
+
+  const statusEl = document.getElementById('send-status');
+  const btn = document.getElementById('btn-send');
+  statusEl.textContent = '↑ enviando diagnóstico...';
+  statusEl.className = 'send-status loading';
+  btn.disabled = true;
+
+  const now = new Date();
+  const fecha = now.toLocaleDateString('es-ES');
+  const hora = now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  const consultor = document.getElementById('f-consultor').value||'—';
+  const rows = [];
+
+  BLOCKS.forEach(block => {
+    const sec = document.getElementById('sec-'+block.id);
+    if (!sec || sec.style.display === 'none') return;
+    block.questions.forEach(q => {
+      const qid = block.id+'-q'+q.n;
+      const el = document.getElementById(qid);
+      const answer = document.getElementById('ans-'+qid)?.value?.trim() || '';
+      rows.push([
+        fecha, hora, empresa, responsable, consultor, currentSector,
+        'Bloque '+block.num, q.n, q.q,
+        el?.classList.contains('checked') ? 'Sí' : 'No',
+        answer, sessionId
+      ]);
+    });
+  });
+
+  try {
+    await sendJSONP({ rows });
+    statusEl.textContent = '✓ '+rows.length+' filas enviadas correctamente a Google Sheets.';
+    statusEl.className = 'send-status ok';
+  } catch(e) {
+    statusEl.textContent = '✗ Error al enviar. Descarga el HTML y ábrelo localmente.';
+    statusEl.className = 'send-status err';
+    btn.disabled = false;
+  }
+}
+
+function resetAll() {
+  if (!confirm('¿Seguro que quieres reiniciar el diagnóstico? Se perderán todos los datos.')) return;
+  document.querySelectorAll('input[type=text]').forEach(i => i.value = '');
+  document.getElementById('f-fecha').valueAsDate = new Date();
+  document.getElementById('resumen-card').classList.remove('visible');
+  document.getElementById('send-status').textContent = '';
+  buildDOM();
+}
+
+buildDOM();
+</script>
+</body>
+</html>
