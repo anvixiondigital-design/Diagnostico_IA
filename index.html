@@ -10,7 +10,7 @@
     --bg: #0e0f11; --surface: #16181c; --surface2: #1e2127;
     --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
     --text: #f0f0ee; --muted: #7a7d85;
-    --accent: #1D9E75; --accent-dim: rgba(29,158,117,0.12); --accent-border: rgba(29,158,117,0.35);
+    --accent: #0023DF; --accent-dim: rgba(0,35,223,0.1); --accent-border: rgba(0,35,223,0.35);
     --warn: #d4a017; --warn-dim: rgba(212,160,23,0.1); --warn-border: rgba(212,160,23,0.3);
     --danger: #e05c5c; --radius: 10px; --radius-lg: 14px;
   }
@@ -18,22 +18,23 @@
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem 4rem; }
   .page { max-width: 760px; margin: 0 auto; }
 
-  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 0.5px solid var(--border2); }
-  .logo { font-family: 'DM Mono', monospace; font-size: 13px; letter-spacing: 0.12em; color: var(--accent); }
-  .logo span { color: var(--muted); }
-  .session-id { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding: 1rem 1.5rem; border-radius: var(--radius-lg); background: #0023DF; }
+  .logo { font-family: 'DM Mono', monospace; font-size: 13px; letter-spacing: 0.12em; color: #fff; }
+  .logo span { color: rgba(255,255,255,0.6); }
+  .session-id { font-size: 11px; color: rgba(255,255,255,0.5); font-family: 'DM Mono', monospace; }
 
-  .client-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; padding: 1.25rem 1.5rem; border-bottom: 0.5px solid var(--border); }
+  .client-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; padding: 1.25rem 1.5rem; border-bottom: 0.5px solid var(--border); background: #0023DF; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
   .cf { display: flex; flex-direction: column; gap: 4px; }
-  .cf label { font-size: 11px; color: var(--muted); }
-  .cf input { background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 8px 10px; color: var(--text); font-size: 13px; transition: border 0.2s; font-family: 'DM Sans', sans-serif; }
-  .cf input:focus { outline: none; border-color: var(--accent); }
+  .cf label { font-size: 11px; color: rgba(255,255,255,0.7); }
+  .cf input { background: rgba(255,255,255,0.15); border: 0.5px solid rgba(255,255,255,0.3); border-radius: var(--radius); padding: 8px 10px; color: #fff; font-size: 13px; transition: border 0.2s; font-family: 'DM Sans', sans-serif; }
+  .cf input::placeholder { color: rgba(255,255,255,0.4); }
+  .cf input:focus { outline: none; border-color: rgba(255,255,255,0.7); }
 
-  .sector-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 1rem 1.5rem; align-items: center; }
-  .sector-label { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-right: 4px; }
-  .sector-btn { font-size: 12px; padding: 5px 13px; border-radius: 20px; border: 0.5px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
-  .sector-btn:hover { color: var(--text); }
-  .sector-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-border); }
+  .sector-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 1rem 1.5rem; align-items: center; background: #0023DF; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  .sector-label { font-size: 11px; color: rgba(255,255,255,0.7); font-family: 'DM Mono', monospace; margin-right: 4px; }
+  .sector-btn { font-size: 12px; padding: 5px 13px; border-radius: 20px; border: 0.5px solid rgba(255,255,255,0.3); background: transparent; color: rgba(255,255,255,0.7); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .sector-btn:hover { color: #fff; border-color: rgba(255,255,255,0.6); }
+  .sector-btn.active { background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.8); }
 
   .prog-bar-wrap { background: var(--surface); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
   .progress-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; font-family: 'DM Mono', monospace; }
@@ -326,8 +327,32 @@ function toggleQuestion(qid) {
   updateProgress();
   updateSectionCount(el.closest('.section'));
   if (el.classList.contains('answered')) {
-    setTimeout(() => document.getElementById('ans-'+qid)?.focus(), 50);
+    setTimeout(() => {
+      const ta = document.getElementById('ans-'+qid);
+      if (ta) {
+        ta.focus();
+        ta.addEventListener('blur', () => autoSaveAnswer(qid), { once: true });
+      }
+    }, 50);
   }
+}
+
+async function autoSaveAnswer(qid) {
+  const answer = document.getElementById('ans-'+qid)?.value?.trim();
+  if (!answer) return;
+  const empresa = document.getElementById('f-empresa').value.trim();
+  const responsable = document.getElementById('f-responsable').value.trim();
+  if (!empresa || !responsable) return;
+  const el = document.getElementById(qid);
+  const now = new Date();
+  const row = [
+    now.toLocaleDateString('es-ES'),
+    now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+    empresa, responsable,
+    document.getElementById('f-consultor').value||'—',
+    currentSector, 'auto', qid, el?.dataset.q||'', 'Sí', answer, sessionId
+  ];
+  try { await sendJSONP({ rows: [row] }); } catch(e) { /* silencioso */ }
 }
 
 function toggleSec(header) {
@@ -421,22 +446,18 @@ function sendJSONP(data) {
   return new Promise((resolve, reject) => {
     const cb = 'cb_' + Date.now();
     const script = document.createElement('script');
-    const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 30000);
+    const timer = setTimeout(() => { cleanup(); console.warn('JSONP timeout'); reject(new Error('timeout')); }, 30000);
     function cleanup() { clearTimeout(timer); delete window[cb]; script.remove(); }
-    window[cb] = (r) => { cleanup(); resolve(r); };
+    window[cb] = (r) => { console.log('JSONP ok:', r); cleanup(); resolve(r); };
     const url = `${SCRIPT_URL}?callback=${cb}&data=${encodeURIComponent(JSON.stringify(data))}`;
+    console.log('JSONP sending:', url.substring(0, 120) + '...');
     script.src = url;
-    script.onerror = (e) => { cleanup(); reject(new Error('script error')); };
+    script.onerror = (e) => { console.error('JSONP script error:', e); cleanup(); reject(new Error('script error')); };
     document.head.appendChild(script);
   });
 }
 
-async function sendInBatches(rows, batchSize = 5) {
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    await sendJSONP({ rows: batch });
-  }
-}
+
 
 async function sendAllToSheets() {
   const empresa = document.getElementById('f-empresa').value.trim();
@@ -453,27 +474,36 @@ async function sendAllToSheets() {
   const fecha = now.toLocaleDateString('es-ES');
   const hora = now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
   const consultor = document.getElementById('f-consultor').value||'—';
-  let totalRows = 0;
+  // Fixed columns
+  const singleRow = [sessionId, fecha, hora, empresa, responsable, consultor, currentSector];
 
+  // Standard blocks always in same position (01-05 + 07)
+  const standardIds = ['b1','b2','b3','b4','b5','b7'];
+  standardIds.forEach(bid => {
+    const block = BLOCKS.find(b => b.id === bid);
+    block.questions.forEach(q => {
+      const qid = bid + '-q' + q.n;
+      const answer = document.getElementById('ans-' + qid)?.value?.trim() || '';
+      singleRow.push(answer);
+    });
+  });
+
+  // Sectorial blocks always at end, empty if not the active sector
+  const sectorialIds = ['b6a','b6b','b6c','b6d','b6e','b6f'];
+  sectorialIds.forEach(bid => {
+    const block = BLOCKS.find(b => b.id === bid);
+    const isActive = block.sector === currentSector;
+    block.questions.forEach(q => {
+      const qid = bid + '-q' + q.n;
+      const answer = isActive ? (document.getElementById('ans-' + qid)?.value?.trim() || '') : '';
+      singleRow.push(answer);
+    });
+  });
+
+  let totalRows = 1;
   try {
-    for (const block of BLOCKS) {
-      const sec = document.getElementById('sec-'+block.id);
-      if (!sec || sec.style.display === 'none') continue;
-      const rows = [];
-      block.questions.forEach(q => {
-        const qid = block.id+'-q'+q.n;
-        const el = document.getElementById(qid);
-        const answer = document.getElementById('ans-'+qid)?.value?.trim() || '';
-        rows.push([
-          fecha, hora, empresa, responsable, consultor, currentSector,
-          'Bloque '+block.num, q.n, q.q,
-          el?.classList.contains('checked') ? 'Sí' : 'No',
-          answer, sessionId
-        ]);
-      });
-      if (rows.length) { await sendJSONP({ rows }); totalRows += rows.length; }
-    }
-    statusEl.textContent = '✓ '+totalRows+' filas enviadas correctamente a Google Sheets.';
+    await sendJSONP({ rows: [singleRow] });
+    statusEl.textContent = '✓ Diagnóstico enviado correctamente a Google Sheets.';
     statusEl.className = 'send-status ok';
   } catch(e) {
     statusEl.textContent = '✗ Error al enviar. Inténtalo de nuevo.';
